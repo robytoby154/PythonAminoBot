@@ -12,6 +12,7 @@ from tkinter import ttk
 
 chatids = {}
 count = 1
+selectedchatids = ""
 x = 0
 
 #Loading
@@ -41,7 +42,8 @@ class chatnamebtn:
         btn.config(command = self.txtshow)
         btn.pack()
     def txtshow(self):
-        print(chatids[self.txt])
+        global selectedchatids
+        selectedchatids = str(chatids[self.txt])
 
 #Chat Scroll Class
 
@@ -50,24 +52,19 @@ class chatbox:
         global x
         frame = Frame(parent, width=750, height=450, bd=1)
         frame.pack()
-
-        self.listbox_log = Listbox(frame, height=12, width = 50)
-        self.scrollbar_log = Scrollbar(frame) 
-
-        self.scrollbar_log.pack(side=RIGHT, fill=Y)
-        self.listbox_log.pack(side=LEFT,fill=Y) 
-
-        self.listbox_log.config(yscrollcommand = self.scrollbar_log.set)
-        self.scrollbar_log.config(command = self.listbox_log.yview)
-
+        self.listbx = Listbox(frame, height=12, width = 50)
+        self.listbx.pack(side=LEFT,fill=Y)
+        self.scrollbr = Scrollbar(frame) 
+        self.scrollbr.pack(side=RIGHT, fill=Y)
+        self.listbx.config(yscrollcommand = self.scrollbr.set)
+        self.scrollbr.config(command = self.listbx.yview)
         x = 2
-
     def AddNew(self, data):
         msgstr = str(f"{data.message.author.nickname}: {data.message.content}")
         checkmsg(data)
-        self.listbox_log.insert(END, msgstr)       #Insert a new item at the end of the list
-        self.listbox_log.select_set(END)                             #Select the new item
-        self.listbox_log.yview(END)                                  #Set the scrollbar to the end of the listbox
+        self.listbx.insert(END, msgstr)
+        self.listbx.select_set(END)
+        self.listbx.yview(END)
 
 #Functions
 
