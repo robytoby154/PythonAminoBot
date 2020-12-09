@@ -1,3 +1,5 @@
+#Created by robytoby154, amino.py provided by Slimakoi
+
 #Modules
 
 from tkinter import *
