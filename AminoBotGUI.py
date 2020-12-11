@@ -204,7 +204,10 @@ gui.geometry("450x350")
 gui.update()
 gui.resizable(height = False, width = False)
 gui.title("Amino Bot Account Information")
-gui.iconbitmap("AminoIcon.ico")
+try:
+    gui.iconbitmap("AminoIcon.ico")
+except:
+    x = 0
 loginbtn = Button(gui, text = "Login", command = login)
 loginbtn.place(x = 135, y = 55)
 emaillbl = Label(gui, text = "Email :")
