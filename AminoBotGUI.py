@@ -61,17 +61,23 @@ class chatbox:
         x = 2
     def AddNew(self, data):
         msgstr = str(f"{data.message.author.nickname}: {data.message.content}")
-        checkmsg(data)
-        self.listbx.insert(END, msgstr)
-        self.listbx.select_set(END)
-        self.listbx.yview(END)
+        try:
+            self.listbx.insert(END, msgstr)
+            self.listbx.select_set(END)
+            self.listbx.yview(END)
+        except:
+            x = 2
 
 #Functions
 
 def checkmsg(data): #Message is put through algorithm
+    global chatbx
     userid = data.message.author.userId
     nickname = data.message.author.nickname
     content = data.message.content
+    msgchatid = data.message.chatId
+    if str(msgchatid) == selectedchatids[selectedchatids.find(":::") + 3:]:
+        chatbx.AddNew(data)
 
 def exp_con():
     global canvas, expconbtn, x
@@ -195,8 +201,7 @@ def sh():
 def on_text_message(data):
     global x
     if x == 2:
-        global chatbx
-        chatbx.AddNew(data)
+        checkmsg(data)
 
 #GUI Construction
 
