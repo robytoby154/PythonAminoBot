@@ -9,11 +9,15 @@ import re
 from tkinter import ttk
 
 #Variables
-
+basecommands = [["help", "?", "h", "cmd", "commands", "cmds", "list"], ["uptime", "ontime", "runtime", "ut", "ot", "rt"]]
 chatids = {}
 count = 1
 selectedchatids = ""
 x = 0
+cmdprefix = "!"
+livecmdupdate = False
+commandslist = []
+startingtime = time.time()
 
 #Loading
 
@@ -29,6 +33,37 @@ except:
     messagebox.showerror("Uh oh...", "Something went wrong with the Amino api")
     gui.destroy()
     raise ValueError("Could not refer to amino module / api")
+
+#Commands Class
+
+class COMMANDS():
+    def __init__(self, cmd, temprsp = "", *k):
+        self.temprsp = temprsp
+        basecmds = {"custom" : self.customfnc, "help" : self.helpfnc, "uptime" : self.uptimefnc}
+        basecmds[cmd](*k)
+
+    def customfnc(self, *k):
+        send_msg(self.temprsp)
+        
+    def helpfnc(*k):
+        counter = 1
+        tempstr = "Commands prefix: " + cmdprefix + "\n[bu]Base Commands:\n"
+        for x in range(len(basecommands)):
+            tempstr += str(counter) + ". " + basecommands[x][0] + " : "
+            for z in range(len(basecommands[x])):
+                tempstr += basecommands[x][z] + ", "
+            tempstr += "\n"
+            counter += 1
+        tempstr += "[bu]Custom Commands:\n"
+        counter = 1
+        for x in range(len(commandslist)):
+            tempstr += str(counter) + ". " + commandslist[x][0] + "\n"
+            counter += 1
+        counter = 1
+        send_msg(tempstr)
+
+    def uptimefnc(*k):
+        send_msg("Bot has been active for " + str(round(((time.time() - startingtime)/60), 3)) + " minutes")
 
 #ChatId Button Class
 
@@ -70,14 +105,74 @@ class chatbox:
 
 #Functions
 
+def send_msg(msg):
+    subclient = amino.SubClient(comId = selectedchatids[:selectedchatids.find(":::")], profile = client.profile)
+    subclient.send_message(message = msg, chatId = selectedchatids[selectedchatids.find(":::") + 3:])
+
+def readcommands(*k):
+    try:
+        commandslist = []
+        with open("Commands.csv", "r") as cmdsfile:
+            content = cmdsfile.readlines()
+            counter = 1
+            for x in range(len(content)):
+                try:
+                    CmdID = int(content[x][0:int(content[x].find(","))])
+                    index1 = content[x].find(",")
+                    index2 = content[x].find(",", index1 + 1)
+                    index3 = content[x].find(",", index2 + 1)
+                    if CmdID == counter:
+                        counter += 1
+                        newcmd = [str(content[x][index1+1:index2]),str(content[x][index2+1:index3]),str(content[x][index3+1:len(content[x])-1])]
+                        commandslist.append(newcmd)
+                except:
+                    continue
+    except:
+        commandslist = []
+    return commandslist
+
 def checkmsg(data): #Message is put through algorithm
-    global chatbx
+    global chatbx, commandslist, livecmdupdate
     userid = data.message.author.userId
     nickname = data.message.author.nickname
-    content = data.message.content
     msgchatid = data.message.chatId
     if str(msgchatid) == selectedchatids[selectedchatids.find(":::") + 3:]:
         chatbx.AddNew(data)
+        tempflag = False
+        cmd = ""
+        temprsp = ""
+        msg = data.message.content
+        if livecmdupdate == True:
+            commandslist = readcommands()
+        if msg[0] != cmdprefix:
+            return
+        try:
+            for x in range(len(basecommands)):
+                if tempflag == False:
+                    for z in range(len(basecommands[x])):
+                        if str(msg[1:].lower()) == str(basecommands[x][z].lower()) and tempflag == False:
+                            cmd = basecommands[x][0]
+                            tempflag = True
+                            break
+            try:
+                if tempflag == False:
+                    for x in range(len(commandslist)):
+                        if commandslist[x][2][0] == "0":
+                            if commandslist[x][0].lower() == msg[1:].lower():
+                                tempflag = True
+                        else:
+                            if commandslist[x][0] == msg[1:]:
+                                tempflag = True
+                        if tempflag == True:
+                            temprsp = commandslist[x][1]
+                            cmd = "custom"
+                            break
+            except:
+                raise ValueError("Commands Error")
+            if tempflag == True:
+                COMMANDS(cmd, temprsp)
+        except:
+            print("Message was unreadable")
 
 def exp_con():
     global canvas, expconbtn, x
@@ -227,5 +322,6 @@ shbtn = Button(gui, text = "Show", bg = "white", borderwidth = 1, command = sh)
 shbtn.place(x = 225, y = 25)
 cnv = Canvas(gui)
 cnv.place(x = 250, y = 100)
+commandslist = readcommands()
 
 gui.mainloop()
