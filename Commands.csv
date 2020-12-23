@@ -1,0 +1,4 @@
+CommandID,Trigger phrase/Keyword (not case sensitive),Response,Attributes
+1,ping,Pong!,0
+2,Hello,Hi!,0
+3,Hi,Hello!,0
