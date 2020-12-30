@@ -7,6 +7,7 @@ from tkinter import messagebox
 import time
 import re
 from tkinter import ttk
+import threading
 
 #Variables
 basecommands = [["help", "?", "h", "cmd", "commands", "cmds", "list"], ["uptime", "ontime", "runtime", "ut", "ot", "rt"]]
@@ -29,6 +30,7 @@ gui.update()
 try:
     import amino
     client = amino.Client()
+    from amino import socket
 except:
     messagebox.showerror("Uh oh...", "Something went wrong with the Amino api")
     gui.destroy()
@@ -76,34 +78,71 @@ class chatnamebtn:
         btn = Button(self.parent, text = self.txt)
         btn.config(command = self.txtshow)
         btn.pack()
+        gui.update()
     def txtshow(self):
-        global selectedchatids
+        global selectedchatids, chatbx, chatcnv
+        chatbx.selfreset()
         selectedchatids = str(chatids[self.txt])
+        subclient = amino.SubClient(comId = selectedchatids[:selectedchatids.find(":::")], profile = client.profile)
+        chatmsg = subclient.get_chat_messages(chatId = selectedchatids[selectedchatids.find(":::") + 3:], size = 25)
+        for message, author in zip(chatmsg.content, chatmsg.author.nickname):
+            chatbx.AddNew(messagename = author, messagecontent = message)
 
 #Chat Scroll Class
 
 class chatbox:
     def __init__(self, parent):
         global x
-        frame = Frame(parent, width=750, height=450, bd=1)
-        frame.pack()
+        self.parent = parent
+        frame = Frame(self.parent, width=750, height=450, bd=1)
+        self.frame = frame
+        self.frame.pack()
         self.listbx = Listbox(frame, height=12, width = 50)
         self.listbx.pack(side=LEFT,fill=Y)
         self.scrollbr = Scrollbar(frame) 
         self.scrollbr.pack(side=RIGHT, fill=Y)
         self.listbx.config(yscrollcommand = self.scrollbr.set)
         self.scrollbr.config(command = self.listbx.yview)
-        x = 2
-    def AddNew(self, data):
-        msgstr = str(f"{data.message.author.nickname}: {data.message.content}")
+        x = 3
+    def AddNew(self, data = 0, messagename = "", messagecontent = ""):
+        if data != 0:
+            msgstr = str(f"{data.message.author.nickname}: {data.message.content}")
+        else:
+            try:
+                msgstr = messagename + ": " + messagecontent
+            except:
+                None
         try:
             self.listbx.insert(END, msgstr)
             self.listbx.select_set(END)
             self.listbx.yview(END)
         except:
-            x = 2
+            None
+        self.listbx.update()
+    def selfreset(self):
+        global x
+        x = 3
+        self.frame.destroy()
+        frame = Frame(self.parent, width=750, height=450, bd=1)
+        self.frame = frame
+        self.frame.pack()
+        self.listbx = Listbox(frame, height=12, width = 50)
+        self.listbx.pack(side=LEFT,fill=Y)
+        self.scrollbr = Scrollbar(frame) 
+        self.scrollbr.pack(side=RIGHT, fill=Y)
+        self.listbx.config(yscrollcommand = self.scrollbr.set)
+        self.scrollbr.config(command = self.listbx.yview)
+        gui.update()
+        x = 2
 
-#Functions
+#Main Functions
+
+def reconsocketloop():
+    shandle = client.socket
+    while(1):
+        shandle.close()
+        shandle.start()
+        time.sleep(120)
 
 def send_msg(msg):
     subclient = amino.SubClient(comId = selectedchatids[:selectedchatids.find(":::")], profile = client.profile)
@@ -226,7 +265,7 @@ def listchats():
                 chats = subclient.get_chat_threads()
                 gui.update()
             except:
-                x = 1
+                None
             for name, id in zip(chats.title, chats.chatId):
                 try:
                     wrdcheck = cleanse_word(name)
@@ -235,13 +274,14 @@ def listchats():
                     chatids[wrdcheck] = tempid
                     gui.update()
                 except:
-                    x = 1
+                    None
     except:
-        x = 1
-    chatcnv = Canvas(gui)
-    chatcnv.place(x = -70, y = 115)
-    chatbx = chatbox(parent = chatcnv)
+        None
     gui.update()
+    while x != 2:
+        if x == 3:
+            x = 2
+        continue
 
 def cleanse_word(text):
     global count
@@ -258,10 +298,12 @@ def cleanse_word(text):
     return newstr
 
 def login():
-    global client, gui, accountnamelbl
+    global client, gui, accountnamelbl, chatcnv, chatbx
     try:
         client.login(email = emailent.get(), password = passwordent.get())
         accountnamelbl = Label(gui, text = "Logged into: " + client.profile.nickname).place(x = 225, y = 5)
+        socketloop = threading.Thread(target = reconsocketloop, daemon = True)
+        socketloop.start()
         disable(loginbtn)
         disable(emailent)
         passwordent.config(show = "*")
@@ -269,7 +311,11 @@ def login():
         shbtn.config(text = "Show")
         disable(shbtn)
         gui.update()
-        listchats()
+        chatcnv = Canvas(gui)
+        chatcnv.place(x = -70, y = 115)
+        chatbx = chatbox(parent = chatcnv)
+        listchatsthread = threading.Thread(target = listchats)
+        listchatsthread.start()
     except:
         loginbtn.config(text = "Invalid")
         gui.update()
